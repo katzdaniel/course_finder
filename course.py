@@ -180,8 +180,23 @@ def send_email(class_info):
     print('email sent')
     
 
-@app.function(image=image, secrets=[modal_secrets])
+@app.function(image=image, secrets=[modal_secrets], timeout=100)
 def run_process():
+    import random
+    import time
+    import random
+
+    # some percentage of the time, don't run the process to poorly avoid rate limiting
+    if random.random() < 0.15:
+        print("don't run this time") 
+        return
+
+    # Wait for a random time between 2 to 10 seconds
+    #  More bad anti rate limiting stuff
+    wait_time = random.uniform(2, 10)
+    time.sleep(wait_time)
+    # print(f"Waited for {wait_time:.2f} seconds")
+    
     response = fetch_data.local()
     class_info_list = extract_class_information.local(response.text)
     # table = extract_table(response.text)
