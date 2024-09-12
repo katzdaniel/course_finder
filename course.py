@@ -1,8 +1,4 @@
-import resend
 import modal
-import requests
-from lxml import html
-import os
 
 app = modal.App("course_finder")
 
@@ -10,8 +6,10 @@ image = modal.Image.debian_slim().pip_install_from_requirements("requirements.tx
 
 modal_secrets = modal.Secret.from_name("course_finder_secrets")
 
-
+@app.function(image=image, secrets=[modal_secrets])
 def fetch_data():
+    import requests
+    import os
     url = 'https://oracle-www.dartmouth.edu/dart/groucho/timetable.display_courses'
     data = {
         'distribradio': 'alldistribs',
@@ -49,7 +47,7 @@ def fetch_data():
     response = requests.post(url, data=data, proxies=proxies)
     return response
 
-
+@app.function(image=image, secrets=[modal_secrets])
 def extract_class_information(html_content):
     """
     Extracts class information from the provided HTML content.
@@ -60,6 +58,8 @@ def extract_class_information(html_content):
     Returns:
         List[Dict]: A list of dictionaries containing class information.
     """
+    from lxml import html
+
     # Parse the HTML content
     tree = html.fromstring(html_content)
 
@@ -97,7 +97,7 @@ def extract_class_information(html_content):
 
     return class_info_list
 
-
+@app.function(image=image, secrets=[modal_secrets])
 def find_row_by_crn(table_element, crn):
     """
     Finds and returns the table row that contains the specified CRN.
@@ -109,6 +109,8 @@ def find_row_by_crn(table_element, crn):
     Returns:
     - The lxml element representing the matching table row, or None if not found.
     """
+    from lxml import html
+
     # Iterate over all rows in the table
     for row in table_element.xpath('.//tr'):
         # Find all cells in the row
@@ -121,7 +123,7 @@ def find_row_by_crn(table_element, crn):
     # Return None if no matching row is found
     return None
 
-
+@app.function(image=image, secrets=[modal_secrets])
 def is_class_full(class_info):
     """
     Checks if a class is full based on the enrollment and limit.
@@ -140,6 +142,7 @@ def is_class_full(class_info):
         # If we can't convert to integers, assume the class is full
         return True
 
+@app.function(image=image, secrets=[modal_secrets])
 def send_email(class_info):
     """
     Sends an email to the user if the class is not full.
@@ -147,6 +150,11 @@ def send_email(class_info):
     Parameters:
     - class_info: A dictionary containing class information.
     """
+    import resend
+    import os
+
+    resend.api_key = os.environ["RESEND_API_KEY"]
+
     course_name = class_info.get('Title')
     course_crn = class_info.get('CRN')
     instructor = class_info.get('Instructor')
@@ -174,10 +182,8 @@ def send_email(class_info):
 
 @app.function(image=image, secrets=[modal_secrets])
 def run_process():
-    resend.api_key = os.environ["RESEND_API_KEY"]
-
-    response = fetch_data()
-    class_info_list = extract_class_information(response.text)
+    response = fetch_data.local()
+    class_info_list = extract_class_information.local(response.text)
     # table = extract_table(response.text)
     # row = find_row_by_crn(table, '91714')
     # print(response.text)
@@ -195,8 +201,8 @@ def run_process():
     else:
         print(f"\nNo class found with CRN {target_crn}")
 
-    if not is_class_full(target_class):
-        send_email(target_class)
+    if not is_class_full.local(target_class):
+        send_email.remote(target_class)
 
 
 # The cron job will run every 5 minutes from 6:00 AM to 7:55 PM ET, Monday through Friday.
