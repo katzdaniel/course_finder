@@ -184,10 +184,18 @@ def send_email(class_info):
 def run_process():
     import random
     import time
-    import random
+
+    coursedict = {
+        'time travel': '91421',
+        'ml': '91728',
+        'ml 2': '91729',
+        'ai': '91731',
+    }
+
+    course_codes = list(coursedict.values())
 
     # some percentage of the time, don't run the process to poorly avoid rate limiting
-    if random.random() < 0.15:
+    if random.random() < 0.2:
         print("don't run this time") 
         return
 
@@ -195,23 +203,18 @@ def run_process():
     #  More bad anti rate limiting stuff
     wait_time = random.uniform(2, 10)
     time.sleep(wait_time)
-    # print(f"Waited for {wait_time:.2f} seconds")
-    
+
     response = fetch_data.local()
     class_info_list = extract_class_information.local(response.text)
-    # table = extract_table(response.text)
-    # row = find_row_by_crn(table, '91714')
-    # print(response.text)
-    # for class_info in class_info_list:
-    #     print(class_info)
-    # Find the class with CRN 91714
-    target_crn = '91714'
+
+    for course_code in course_codes:
+        process_single_course(class_info_list, course_code)
+
+@app.function(image=image, secrets=[modal_secrets])
+def process_single_course(class_info_list, target_crn):
     target_class = next((class_info for class_info in class_info_list if class_info.get('CRN') == target_crn), None)
     
     if target_class:
-        # print(f"\nClass with CRN {target_crn}:")
-        # for key, value in target_class.items():
-        #     print(f"{key}: {value}")
         print(target_class)
     else:
         print(f"\nNo class found with CRN {target_crn}")
@@ -220,13 +223,13 @@ def run_process():
         send_email.remote(target_class)
 
 
-# The cron job will run every 5 minutes from 6:00 AM to 7:55 PM ET, Monday through Friday.
-@app.function(schedule=modal.Cron("*/5 10-23 * * MON-FRI"))
+# The cron job will run every 10 minutes from 6:00 AM to 7:55 PM ET, Monday through Friday.
+@app.function(schedule=modal.Cron("*/10 10-23 * * MON-FRI"))
 def entry1():
     run_process.spawn()
 
-# The cron job will run every 5 minutes from 8:00 PM to 1:55 AM ET, Monday evening through Saturday morning.
-@app.function(schedule=modal.Cron("*/5 0-5 * * TUE-SAT"))
+# The cron job will run every 10 minutes from 8:00 PM to 1:55 AM ET, Monday evening through Saturday morning.
+@app.function(schedule=modal.Cron("*/10 0-5 * * TUE-SAT"))
 def entry2():
     run_process.spawn()
 
