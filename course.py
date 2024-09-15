@@ -13,7 +13,7 @@ def fetch_data():
     url = 'https://oracle-www.dartmouth.edu/dart/groucho/timetable.display_courses'
     data = {
         'distribradio': 'alldistribs',
-        'depts': ['no_value', 'COSC'],
+        'depts': ['no_value', 'COSC', 'MATH', 'PHIL'],
         'periods': 'no_value',
         'distribs': 'no_value',
         'distribs_i': 'no_value',
@@ -179,6 +179,17 @@ def send_email(class_info):
 
     print('email sent')
     
+@app.function(image=image, secrets=[modal_secrets])
+def process_single_course(class_info_list, target_crn):
+    target_class = next((class_info for class_info in class_info_list if class_info.get('CRN') == target_crn), None)
+    
+    if target_class:
+        print(target_class)
+    else:
+        print(f"\nNo class found with CRN {target_crn}")
+
+    if not is_class_full.local(target_class):
+        send_email.remote(target_class)
 
 @app.function(image=image, secrets=[modal_secrets], timeout=100)
 def run_process():
@@ -208,19 +219,7 @@ def run_process():
     class_info_list = extract_class_information.local(response.text)
 
     for course_code in course_codes:
-        process_single_course(class_info_list, course_code)
-
-@app.function(image=image, secrets=[modal_secrets])
-def process_single_course(class_info_list, target_crn):
-    target_class = next((class_info for class_info in class_info_list if class_info.get('CRN') == target_crn), None)
-    
-    if target_class:
-        print(target_class)
-    else:
-        print(f"\nNo class found with CRN {target_crn}")
-
-    if not is_class_full.local(target_class):
-        send_email.remote(target_class)
+        process_single_course.local(class_info_list, course_code)
 
 
 # The cron job will run every 10 minutes from 6:00 AM to 7:55 PM ET, Monday through Friday.
