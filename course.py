@@ -197,10 +197,10 @@ def run_process():
     import time
 
     coursedict = {
-        'time travel': '91421',
+        # 'time travel': '91421',
         'ml': '91728',
         'ml 2': '91729',
-        'ai': '91731',
+        # 'ai': '91731',
     }
 
     course_codes = list(coursedict.values())
