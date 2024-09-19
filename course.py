@@ -206,9 +206,9 @@ def run_process():
     course_codes = list(coursedict.values())
 
     # some percentage of the time, don't run the process to poorly avoid rate limiting
-    if random.random() < 0.2:
-        print("don't run this time") 
-        return
+    # if random.random() < 0.2:
+    #     print("don't run this time") 
+    #     return
 
     # Wait for a random time between 2 to 10 seconds
     #  More bad anti rate limiting stuff
@@ -223,12 +223,12 @@ def run_process():
 
 
 # The cron job will run every 10 minutes from 6:00 AM to 7:55 PM ET, Monday through Friday.
-@app.function(schedule=modal.Cron("*/10 10-23 * * MON-FRI"))
+@app.function(schedule=modal.Cron("*/6 10-23 * * MON-FRI"))
 def entry1():
     run_process.spawn()
 
 # The cron job will run every 10 minutes from 8:00 PM to 1:55 AM ET, Monday evening through Saturday morning.
-@app.function(schedule=modal.Cron("*/10 0-5 * * TUE-SAT"))
+@app.function(schedule=modal.Cron("*/5 0-5 * * TUE-SAT"))
 def entry2():
     run_process.spawn()
 
